@@ -13,129 +13,6 @@
 #include "../include/poisson2d.h"
 
 /**
- * @brief Exchanges ghost cells with neighbouring processes using blocking
- *        communication.
- *
- * Performs ghost cell exchange between neighbouring processes using blocking
- * MPI_Sendrecv calls in both horizontal and vertical directions. Uses a custom
- * MPI datatype for exchanging non-contiguous vertical data.
- *
- * @param[in,out] x Grid array to exchange ghost cells for.
- * @param[in] nx Number of interior grid points in x-axis.
- * @param[in] row_s Starting row index of local domain.
- * @param[in] row_e Ending row index of local domain.
- * @param[in] col_s Starting column index of local domain.
- * @param[in] col_e Ending column index of local domain.
- * @param[in] comm MPI communicator.
- * @param[in] nbrleft Rank of the left neighbouring process.
- * @param[in] nbrright Rank of the right neighbouring process.
- * @param[in] nbrup Rank of the upper neighbouring process.
- * @param[in] nbrdown Rank of the lower neighbouring process.
- * @param[in] row_type MPI datatype for exchanging non-contiguous row data.
- */
-void exchang2d_1(double x[][maxn], int nx __attribute__((unused)), int row_s,
-                 int row_e, int col_s, int col_e, MPI_Comm comm, int nbrleft,
-                 int nbrright, int nbrup, int nbrdown, MPI_Datatype row_type) {
-  int lny =
-      row_e - row_s +
-      1; // Calculates the number of rows in the local domain for this process
-
-  // Exchange in horizontal direction (i.e., left to right); these are
-  // contiguous in memory
-  MPI_Sendrecv(&x[col_e][row_s], lny, MPI_DOUBLE, nbrright, 0,
-               &x[col_s - 1][row_s], lny, MPI_DOUBLE, nbrleft, 0, comm,
-               MPI_STATUS_IGNORE); // Sends the rightmost column to the right
-                                   // neighbour and simultaneously receives the
-                                   // left ghost column from the left neighbour
-  MPI_Sendrecv(
-      &x[col_s][row_s], lny, MPI_DOUBLE, nbrleft, 1, &x[col_e + 1][row_s], lny,
-      MPI_DOUBLE, nbrright, 1, comm,
-      MPI_STATUS_IGNORE); // Sends the leftmost column to the left
-                          // neighbour and simultaneously receives the right
-                          // ghost column from the right neighbour
-
-  // Exchange in vertical direction (i.e., up to down); these are
-  // non-contiguous in memory
-  MPI_Sendrecv(&x[col_s][row_e], 1, row_type, nbrup, 2, &x[col_s][row_s - 1], 1,
-               row_type, nbrdown, 2, comm,
-               MPI_STATUS_IGNORE); // Sends the topmost row to the top neighbour
-                                   // and simultaneously receives the bottom
-                                   // ghost row from the bottom neighbour
-  MPI_Sendrecv(&x[col_s][row_s], 1, row_type, nbrdown, 3, &x[col_s][row_e + 1],
-               1, row_type, nbrup, 3, comm,
-               MPI_STATUS_IGNORE); // Sends the bottommost row to the bottom
-                                   // neighbour and simultaneously receives the
-                                   // top ghost row from the top neighbour
-}
-
-/**
- * @brief Exchanges ghost cells with neighbouring processes using non-blocking
- *        communication.
- *
- * Performs ghost cell exchange between neighbouring processes using
- * non-blocking MPI_Isend and MPI_Irecv calls in both horizontal and vertical
- * directions. Uses a custom MPI datatype for exchanging non-contiguous vertical
- * data. This allows for potential overlap of communication and computation,
- * improving performance.
- *
- * @param[in,out] x Grid array to exchange ghost cells for.
- * @param[in] nx er of interior grid points in x-axis.
- * @param[in] row_s Starting row index of local domain.
- * @param[in] row_e Ending row index of local domain.
- * @param[in] col_s Starting column index of local domain.
- * @param[in] col_e Ending column index of local domain.
- * @param[in] comm MPI communicator.
- * @param[in] nbrleft Rank of the left neighbouring process.
- * @param[in] nbrright Rank of the right neighbouring process.
- * @param[in] nbrup Rank of the upper neighbouring process.
- * @param[in] nbrdown Rank of the lower neighbouring process.
- * @param[in] row_type MPI datatype for exchanging non-contiguous row data.
- */
-void exchang2d_nb(double x[][maxn], int nx __attribute__((unused)), int row_s,
-                  int row_e, int col_s, int col_e, MPI_Comm comm, int nbrleft,
-                  int nbrright, int nbrup, int nbrdown, MPI_Datatype row_type) {
-  int lny =
-      row_e - row_s +
-      1; // Calculates the number of rows in the local domain for this process
-  MPI_Request reqs[8]; // Array to hold eight MPI request handles
-
-  // Left boundary column, which is contiguous
-  MPI_Irecv(&x[col_s - 1][row_s], lny, MPI_DOUBLE, nbrleft, 0, comm,
-            &reqs[0]); // Receives the ghost column from the left neighbour into
-                       // the column at index col_s - 1
-
-  // Right boundary column, which is contiguous
-  MPI_Irecv(&x[col_e + 1][row_s], lny, MPI_DOUBLE, nbrright, 1, comm,
-            &reqs[1]); // Receives the ghost column from the right neighbour
-                       // into the column at index col_e + 1
-
-  // Bottom boundary row, which is non-contiguous and thus, is using row_type
-  MPI_Irecv(&x[col_s][row_s - 1], 1, row_type, nbrdown, 2, comm,
-            &reqs[2]); // Receives the ghost row from the bottom neighbour into
-                       // the row at index row_s - 1
-
-  // Top boundary row, which is non-contiguous and thus, is using row_type
-  MPI_Irecv(&x[col_s][row_e + 1], 1, row_type, nbrup, 3, comm,
-            &reqs[3]); // Receives the ghost row from the top neighbour into the
-                       // row at index row_e + 1
-
-  // Send rightmost column to right neighbour
-  MPI_Isend(&x[col_e][row_s], lny, MPI_DOUBLE, nbrright, 0, comm, &reqs[4]);
-
-  // Send leftmost column to left neighbour
-  MPI_Isend(&x[col_s][row_s], lny, MPI_DOUBLE, nbrleft, 1, comm, &reqs[5]);
-
-  // Send topmost row to top neighbour, which is non-contiguous
-  MPI_Isend(&x[col_s][row_e], 1, row_type, nbrup, 2, comm, &reqs[6]);
-
-  // Send bottommost row to bottom neighbour, which is non-contiguous
-  MPI_Isend(&x[col_s][row_s], 1, row_type, nbrdown, 3, comm, &reqs[7]);
-
-  // Wait for all communications to complete
-  MPI_Waitall(8, reqs, MPI_STATUSES_IGNORE);
-}
-
-/**
  * @brief Calculates the squared difference between two grid arrays.
  *
  * Computes the sum of squared differences between two grid arrays, which is
@@ -190,4 +67,68 @@ void sweep2d(double a[][maxn], double f[][maxn], int nx, int row_s, int row_e,
                         h * h * f[i][j]);
     }
   }
+}
+
+/**
+ * @brief Exchanges ghost cells with neighboring processes using RMA fence
+ *        synchronization.
+ *
+ * @param[in,out] x Solution values.
+ * @param[in] row_s Starting row index of local domain.
+ * @param[in] row_e Ending row index of local domain.
+ * @param[in] col_s Starting column index of local domain.
+ * @param[in] col_e Ending column index of local domain.
+ * @param[in] nbrleft Rank of left neighbor.
+ * @param[in] nbrright Rank of right neighbor.
+ * @param[in] nbrup Rank of upper neighbor.
+ * @param[in] nbrdown Rank of lower neighbor.
+ * @param[in] row_type Custom MPI datatype for non-contiguous row data.
+ * @param[in] win MPI window object exposing the grid array.
+ */
+void exchang2d_rma_fence(double x[][maxn], int row_s, int row_e, int col_s,
+                         int col_e, int nbrleft, int nbrright, int nbrup,
+                         int nbrdown, MPI_Datatype row_type, MPI_Win win) {
+  int lny = row_e - row_s + 1; // Number of rows in local domain
+
+  // Start the RMA access epoch
+  MPI_Win_fence(0, win);
+
+  // Get their (left neighbor) rightmost column into our left ghost column
+  if (nbrleft != MPI_PROC_NULL) {
+
+    // We want to get the data at column (col_s - 1) from our left neighbor
+    MPI_Aint displacement = (MPI_Aint) (col_s - 1) * maxn + row_s;
+    MPI_Get(&x[col_s - 1][row_s], lny, MPI_DOUBLE, nbrleft, displacement, lny,
+            MPI_DOUBLE, win);
+  }
+
+  // Get their (right neighbor) leftmost column into our right ghost column
+  if (nbrright != MPI_PROC_NULL) {
+
+    // We want to get the data at column (col_e + 1) from our right neighbor
+    MPI_Aint displacement = (MPI_Aint) (col_e + 1) * maxn + row_s;
+    MPI_Get(&x[col_e + 1][row_s], lny, MPI_DOUBLE, nbrright, displacement, lny,
+            MPI_DOUBLE, win);
+  }
+
+  // Get their (lower neighbor) topmost row into our bottom ghost row
+  if (nbrdown != MPI_PROC_NULL) {
+
+    // We want to get the data at row (row_s - 1) from our lower neighbor
+    MPI_Aint displacement = (MPI_Aint) col_s * maxn + (row_s - 1);
+    MPI_Get(&x[col_s][row_s - 1], 1, row_type, nbrdown, displacement, 1,
+            row_type, win);
+  }
+
+  // Get their (upper neighbor) bottommost row into our top ghost row
+  if (nbrup != MPI_PROC_NULL) {
+
+    // We want to get the data at row (row_e + 1) from our upper neighbor
+    MPI_Aint displacement = (MPI_Aint) col_s * maxn + (row_e + 1);
+    MPI_Get(&x[col_s][row_e + 1], 1, row_type, nbrup, displacement, 1, row_type,
+            win);
+  }
+
+  // End the RMA access epoch
+  MPI_Win_fence(0, win);
 }
