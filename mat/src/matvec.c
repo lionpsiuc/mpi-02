@@ -30,48 +30,54 @@ int matvec(double local_matrix[][BLOCK_DIM], double* local_x, double* local_y,
     return 1;
   }
 
-  // Allocate memory for the complete input vector
-  double* global_x = (double*) malloc(MATRIX_DIM * sizeof(double));
-  if (!global_x) {
-    fprintf(
-        stderr,
-        "Error: Could not allocate memory for global vector on process %d\n",
-        rank);
+  // Allocate memory for the intermediate local result
+  double* intermediate_y = (double*) malloc(MATRIX_DIM * sizeof(double));
+  if (!intermediate_y) {
+    fprintf(stderr,
+            "Error: Process %d could not allocate memory for the intermediate "
+            "local result\n",
+            rank);
     return 1;
   }
 
-  // MPI_Allgather the complete input vector to all processes, where each
-  // process contributes five elements
-  MPI_Allgather(local_x, BLOCK_DIM, MPI_DOUBLE, global_x, BLOCK_DIM, MPI_DOUBLE,
+  // Initialize intermediate_y to zero
+  for (int i = 0; i < MATRIX_DIM; i++) {
+    intermediate_y[i] = 0.0;
+  }
+
+  // Each process computes its partial product
+  for (int i = 0; i < MATRIX_DIM; i++) { // Iterate over global rows
+    double sum_for_row_i = 0.0;
+    for (int k = 0; k < BLOCK_DIM; k++) {
+      sum_for_row_i += local_matrix[i][k] * local_x[k];
+    }
+    intermediate_y[i] = sum_for_row_i;
+  }
+
+  // Allocate memory for the final global result vector
+  double* global_y_final = (double*) malloc(MATRIX_DIM * sizeof(double));
+  if (!global_y_final) {
+    fprintf(
+        stderr,
+        "Error: Process %d could not allocate memory for the final solution\n",
+        rank);
+    free(intermediate_y);
+    return 1;
+  }
+
+  // Sum up all intermediate_y vectors from all processes
+  MPI_Allreduce(intermediate_y, global_y_final, MATRIX_DIM, MPI_DOUBLE, MPI_SUM,
                 comm);
 
-  // Initialize local result to zero
-  for (int i = 0; i < BLOCK_DIM; i++) {
-    local_y[i] = 0.0;
+  // Each process extracts its assigned portion from global_y_final into local_y
+  int start_row_for_this_rank = rank * BLOCK_DIM;
+  for (int k = 0; k < BLOCK_DIM; k++) {
+    local_y[k] = global_y_final[start_row_for_this_rank + k];
   }
 
-  // Compute the local portion of the result vector; each process computes five
-  // rows of the result
-  int start_row = rank * BLOCK_DIM;
-  int end_row   = start_row + BLOCK_DIM;
-
-  // For each row this process is responsible for...
-  for (int i = start_row; i < end_row; i++) {
-    double sum = 0.0;
-
-    // multiply the current row with the complete vector
-    for (int j = 0; j < MATRIX_DIM; j++) {
-      int local_row = i - start_row; // Local row index
-      int local_col = j % BLOCK_DIM; // Local column index
-      sum += local_matrix[local_row][local_col] * global_x[j];
-    }
-
-    // and store result in local output vector
-    local_y[i - start_row] = sum;
-  }
-
-  // Clean up
-  free(global_x);
+  // Clean up allocated memory
+  free(intermediate_y);
+  free(global_y_final);
 
   return 0;
 }
