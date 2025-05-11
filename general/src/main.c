@@ -181,6 +181,17 @@ int main(int argc, char** argv) {
   MPI_Type_vector(lnx, 1, maxn, MPI_DOUBLE, &row_type);
   MPI_Type_commit(&row_type);
 
+  MPI_Group cart_group;
+  MPI_Comm_group(cart_comm, &cart_group);
+
+  // Use of MPI_Win_fence
+  MPI_Win win_a, win_b;
+  size_t  window_size = (size_t) maxn * maxn * sizeof(double);
+  MPI_Win_create(a, window_size, sizeof(double), MPI_INFO_NULL, cart_comm,
+                 &win_a);
+  MPI_Win_create(b, window_size, sizeof(double), MPI_INFO_NULL, cart_comm,
+                 &win_b);
+
   // Start timing
   if (cart_rank == 0) {
     printf("\nStarting iterative solver\n");
@@ -190,14 +201,11 @@ int main(int argc, char** argv) {
   // Main iteration loop
   glob_diff = 1000;
   for (it = 0; it < maxit; it++) {
-    exchang2d_1(a, nx, row_s, row_e, col_s, col_e, cart_comm, nbrleft, nbrright,
-                nbrup, nbrdown,
-                row_type); // Exchange ghost cells using blocking MPI_Sendrecv
+    exchang2d_rma_pscw(a, row_s, row_e, col_s, col_e, nbrleft, nbrright, nbrup,
+                       nbrdown, row_type, win_a, cart_group);
     sweep2d(a, f, nx, row_s, row_e, col_s, col_e, b);
-    exchang2d_nb(b, nx, row_s, row_e, col_s, col_e, cart_comm, nbrleft,
-                 nbrright, nbrup, nbrdown,
-                 row_type); // Exchange ghost cells again, this time using
-                            // non-blocking MPI_Isend and MPI_Irecv
+    exchang2d_rma_pscw(b, row_s, row_e, col_s, col_e, nbrleft, nbrright, nbrup,
+                       nbrdown, row_type, win_b, cart_group);
     sweep2d(b, f, nx, row_s, row_e, col_s, col_e, a);
 
     // Check for convergence
@@ -332,6 +340,9 @@ int main(int argc, char** argv) {
     printf("=======================================================\n\n");
   }
   MPI_Comm_free(&cart_comm);
+  MPI_Group_free(&cart_group);
+  MPI_Win_free(&win_a);
+  MPI_Win_free(&win_b);
   MPI_Finalize();
   return 0;
 }
