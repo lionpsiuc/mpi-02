@@ -1,6 +1,5 @@
 /**
- * @file gatherwrite.c
- *
+ * @file  gatherwrite.c
  * @brief Implementation of 2D grid gathering and writing utilities.
  */
 
@@ -19,23 +18,24 @@
  * complete global grid on the root process.
  *
  * @param[out] global_grid Array to store the complete gathered grid (only used
- * by root process)
- * @param[in] a Local grid array containing this process's portion of the
- * solution
- * @param[in] row_s Starting row index of local domain.
- * @param[in] row_e Ending row index of local domain.
- * @param[in] col_s Starting column index of local domain.
- * @param[in] col_e Ending column index of local domain.
- * @param[in] nx Number of interior grid points in x-axis.
- * @param[in] ny Number of interior grid points in y-axis.
- * @param[in] myid Rank of the current MPI process.
- * @param[in] nprocs Total number of MPI processes.
- * @param[in] row_s_vals Array containing start row indices for all processes.
- * @param[in] row_e_vals Array containing end row indices for all processes.
- * @param[in] col_s_vals Array containing start column indices for all
- *                       processes.
- * @param[in] col_e_vals Array containing end column indices for all processes.
- * @param[in] comm MPI communicator.
+ *                         by root process).
+ * @param[in]  a           Local grid array containing this process's portion of
+ *                         the solution.
+ * @param[in]  row_s       Starting row index of local domain.
+ * @param[in]  row_e       Ending row index of local domain.
+ * @param[in]  col_s       Starting column index of local domain.
+ * @param[in]  col_e       Ending column index of local domain.
+ * @param[in]  nx          Number of interior grid points in x-axis.
+ * @param[in]  ny          Number of interior grid points in y-axis.
+ * @param[in]  myid        Rank of the current MPI process.
+ * @param[in]  nprocs      Total number of MPI processes.
+ * @param[in]  row_s_vals  Array containing start row indices for all processes.
+ * @param[in]  row_e_vals  Array containing end row indices for all processes.
+ * @param[in]  col_s_vals  Array containing start column indices for all
+ *                         processes.
+ * @param[in]  col_e_vals  Array containing end column indices for all
+ *                         processes.
+ * @param[in]  comm        MPI communicator.
  */
 void GatherGrid2D(double global_grid[][maxn], double a[][maxn], int row_s,
                   int row_e, int col_s, int col_e, int nx, int ny, int myid,
@@ -43,7 +43,7 @@ void GatherGrid2D(double global_grid[][maxn], double a[][maxn], int row_s,
                   int* col_e_vals, MPI_Comm comm) {
   if (myid == 0) {
 
-    // Initialise the global grid first
+    // Initialize the global grid first
     for (int i = 0; i < maxn; i++) {
       for (int j = 0; j < maxn; j++) {
         global_grid[i][j] = 0.0;
@@ -86,7 +86,7 @@ void GatherGrid2D(double global_grid[][maxn], double a[][maxn], int row_s,
     }
   }
 
-  // Synchronise before data exchange
+  // Synchronize before data exchange
   MPI_Barrier(comm);
 
   // Receive data into root process from other processes
@@ -117,17 +117,18 @@ void GatherGrid2D(double global_grid[][maxn], double a[][maxn], int row_s,
 }
 
 /**
- * @brief Writes 2D grid data to a file or terminal for visualisation.
+ * @brief Writes 2D grid data to a file or terminal for visualization.
  *
- * @param[in] filename Base name of the file to write.
- * @param[in] a Grid array containing the data to write.
- * @param[in] nx Number of interior grid points in x-axis.
- * @param[in] ny Number of interior grid points in y-axis.
- * @param[in] rank Rank of the current MPI process.
- * @param[in] row_s Starting row index of the grid portion to write.
- * @param[in] row_e Ending row index of the grid portion to write.
- * @param[in] col_s Starting column index of the grid portion to write.
- * @param[in] col_e Ending column index of the grid portion to write.
+ * @param[in] filename        Base name of the file to write.
+ * @param[in] a               Grid array containing the data to write.
+ * @param[in] nx              Number of interior grid points in x-axis.
+ * @param[in] ny              Number of interior grid points in y-axis.
+ * @param[in] rank            Rank of the current MPI process.
+ * @param[in] row_s           Starting row index of the grid portion to write.
+ * @param[in] row_e           Ending row index of the grid portion to write.
+ * @param[in] col_s           Starting column index of the grid portion to
+ *                            write.
+ * @param[in] col_e           Ending column index of the grid portion to write.
  * @param[in] write_to_stdout Flag to control whether to also print grid to
  *                            standard output.
  */
@@ -135,6 +136,7 @@ void write_grid(char* filename, double a[][maxn],
                 int nx __attribute__((unused)), int ny __attribute__((unused)),
                 int rank, int row_s, int row_e, int col_s, int col_e,
                 int write_to_stdout) {
+
   // Create filename with extension
   char full_filename[256];
   sprintf(full_filename, "%s.txt", filename);

@@ -9,13 +9,13 @@ BINDIR   = bin
 SRCS = $(wildcard $(SRCDIR)/*.c)
 OBJS = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SRCS))
 
-EXECS = $(BINDIR)/mat
+EXECS = $(BINDIR)/main
 
 $(shell mkdir -p $(BUILDDIR) $(BINDIR))
 
 all: $(EXECS)
 
-$(BINDIR)/mat: $(OBJS)
+$(BINDIR)/main: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
@@ -23,8 +23,8 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.c
 
 .PHONY: clean run
 
-run: $(EXECS)
-	mpirun -np 4 $(BINDIR)/mat
-
 clean:
 	$(RM) -r $(BUILDDIR)/* $(BINDIR)/*
+
+run: $(EXECS)
+	mpirun -np 4 $(BINDIR)/main

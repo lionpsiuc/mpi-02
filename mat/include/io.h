@@ -27,9 +27,8 @@
  *
  * @return 0 on success, non-zero on error.
  */
-int read_distributed_matrix(const char* filename,
-                            double local_matrix[][BLOCK_DIM], int rank,
-                            int nprocs, MPI_Comm comm);
+int read_mat(const char* filename, double local_matrix[][BLOCK_DIM], int rank,
+             int nprocs, MPI_Comm comm);
 
 /**
  * @brief Read a distributed vector from a binary file.
@@ -42,8 +41,8 @@ int read_distributed_matrix(const char* filename,
  *
  * @return 0 on success, non-zero on error.
  */
-int read_distributed_vector(const char* filename, double* local_vector,
-                            int rank, int nprocs, MPI_Comm comm);
+int read_vec(const char* filename, double* local_vector, int rank, int nprocs,
+             MPI_Comm comm);
 
 /**
  * @brief Print the local portion of the matrix.
@@ -51,7 +50,7 @@ int read_distributed_vector(const char* filename, double* local_vector,
  * @param[in] local_matrix The local matrix data.
  * @param[in] rank         Process rank.
  */
-void print_local_matrix(double local_matrix[][BLOCK_DIM], int rank);
+void print_local_mat(double local_matrix[][BLOCK_DIM], int rank);
 
 /**
  * @brief Print the local portion of the vector.
@@ -59,6 +58,6 @@ void print_local_matrix(double local_matrix[][BLOCK_DIM], int rank);
  * @param[in] local_vector The local vector data.
  * @param[in] rank         Process rank.
  */
-void print_local_vector(double* local_vector, int rank);
+void print_local_vec(double* local_vector, int rank);
 
 #endif

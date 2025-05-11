@@ -1,6 +1,6 @@
 # High-Performance Computing Software II <!-- omit from toc -->
 
-## Assignment 1 - 2D Processor Decomposition Poisson Solver <!-- omit from toc -->
+## Assignment 2 - 2D Processor Decomposition Poisson Solver <!-- omit from toc -->
 
 - [Mathematical Background](#mathematical-background)
 - [Folder Structure and Usage Details](#folder-structure-and-usage-details)

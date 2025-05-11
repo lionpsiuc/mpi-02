@@ -1,8 +1,6 @@
 /**
- * @file jacobi.c
- *
- * @brief Implementation of Jacobi iteration functions for the 2D parallel
- *        Poisson solver.
+ * @file  jacobi.c
+ * @brief Implementation of Jacobi iteration functions.
  */
 
 #include <mpi.h>
@@ -13,25 +11,25 @@
 #include "../include/poisson2d.h"
 
 /**
- * @brief Exchanges ghost cells with neighbouring processes using blocking
+ * @brief Exchanges ghost cells with neighboring processes using blocking
  *        communication.
  *
- * Performs ghost cell exchange between neighbouring processes using blocking
+ * Performs ghost cell exchange between neighboring processes using blocking
  * MPI_Sendrecv calls in both horizontal and vertical directions. Uses a custom
  * MPI datatype for exchanging non-contiguous vertical data.
  *
- * @param[in,out] x Grid array to exchange ghost cells for.
- * @param[in] nx Number of interior grid points in x-axis.
- * @param[in] row_s Starting row index of local domain.
- * @param[in] row_e Ending row index of local domain.
- * @param[in] col_s Starting column index of local domain.
- * @param[in] col_e Ending column index of local domain.
- * @param[in] comm MPI communicator.
- * @param[in] nbrleft Rank of the left neighbouring process.
- * @param[in] nbrright Rank of the right neighbouring process.
- * @param[in] nbrup Rank of the upper neighbouring process.
- * @param[in] nbrdown Rank of the lower neighbouring process.
- * @param[in] row_type MPI datatype for exchanging non-contiguous row data.
+ * @param[in,out] x        Grid array to exchange ghost cells for.
+ * @param[in]     nx       Number of interior grid points in x-axis.
+ * @param[in]     row_s    Starting row index of local domain.
+ * @param[in]     row_e    Ending row index of local domain.
+ * @param[in]     col_s    Starting column index of local domain.
+ * @param[in]     col_e    Ending column index of local domain.
+ * @param[in]     comm     MPI communicator.
+ * @param[in]     nbrleft  Rank of the left neighboring process.
+ * @param[in]     nbrright Rank of the right neighboring process.
+ * @param[in]     nbrup    Rank of the upper neighboring process.
+ * @param[in]     nbrdown  Rank of the lower neighboring process.
+ * @param[in]     row_type MPI datatype for exchanging non-contiguous row data.
  */
 void exchang2d_1(double x[][maxn], int nx __attribute__((unused)), int row_s,
                  int row_e, int col_s, int col_e, MPI_Comm comm, int nbrleft,
@@ -45,51 +43,50 @@ void exchang2d_1(double x[][maxn], int nx __attribute__((unused)), int row_s,
   MPI_Sendrecv(&x[col_e][row_s], lny, MPI_DOUBLE, nbrright, 0,
                &x[col_s - 1][row_s], lny, MPI_DOUBLE, nbrleft, 0, comm,
                MPI_STATUS_IGNORE); // Sends the rightmost column to the right
-                                   // neighbour and simultaneously receives the
-                                   // left ghost column from the left neighbour
-  MPI_Sendrecv(
-      &x[col_s][row_s], lny, MPI_DOUBLE, nbrleft, 1, &x[col_e + 1][row_s], lny,
-      MPI_DOUBLE, nbrright, 1, comm,
-      MPI_STATUS_IGNORE); // Sends the leftmost column to the left
-                          // neighbour and simultaneously receives the right
-                          // ghost column from the right neighbour
+                                   // neighbor and simultaneously receives the
+                                   // left ghost column from the left neighbor
+  MPI_Sendrecv(&x[col_s][row_s], lny, MPI_DOUBLE, nbrleft, 1,
+               &x[col_e + 1][row_s], lny, MPI_DOUBLE, nbrright, 1, comm,
+               MPI_STATUS_IGNORE); // Sends the leftmost column to the left
+                                   // neighbor and simultaneously receives the
+                                   // right ghost column from the right neighbor
 
   // Exchange in vertical direction (i.e., up to down); these are
   // non-contiguous in memory
   MPI_Sendrecv(&x[col_s][row_e], 1, row_type, nbrup, 2, &x[col_s][row_s - 1], 1,
                row_type, nbrdown, 2, comm,
-               MPI_STATUS_IGNORE); // Sends the topmost row to the top neighbour
+               MPI_STATUS_IGNORE); // Sends the topmost row to the top neighbor
                                    // and simultaneously receives the bottom
-                                   // ghost row from the bottom neighbour
+                                   // ghost row from the bottom neighbor
   MPI_Sendrecv(&x[col_s][row_s], 1, row_type, nbrdown, 3, &x[col_s][row_e + 1],
                1, row_type, nbrup, 3, comm,
                MPI_STATUS_IGNORE); // Sends the bottommost row to the bottom
-                                   // neighbour and simultaneously receives the
-                                   // top ghost row from the top neighbour
+                                   // neighbor and simultaneously receives the
+                                   // top ghost row from the top neighbor
 }
 
 /**
- * @brief Exchanges ghost cells with neighbouring processes using non-blocking
+ * @brief Exchanges ghost cells with neighboring processes using non-blocking
  *        communication.
  *
- * Performs ghost cell exchange between neighbouring processes using
- * non-blocking MPI_Isend and MPI_Irecv calls in both horizontal and vertical
- * directions. Uses a custom MPI datatype for exchanging non-contiguous vertical
- * data. This allows for potential overlap of communication and computation,
- * improving performance.
+ * Performs ghost cell exchange between neighboring processes using non-blocking
+ * MPI_Isend and MPI_Irecv calls in both horizontal and vertical directions.
+ * Uses a custom MPI datatype for exchanging non-contiguous vertical data. This
+ * allows for potential overlap of communication and computation, improving
+ * performance.
  *
- * @param[in,out] x Grid array to exchange ghost cells for.
- * @param[in] nx er of interior grid points in x-axis.
- * @param[in] row_s Starting row index of local domain.
- * @param[in] row_e Ending row index of local domain.
- * @param[in] col_s Starting column index of local domain.
- * @param[in] col_e Ending column index of local domain.
- * @param[in] comm MPI communicator.
- * @param[in] nbrleft Rank of the left neighbouring process.
- * @param[in] nbrright Rank of the right neighbouring process.
- * @param[in] nbrup Rank of the upper neighbouring process.
- * @param[in] nbrdown Rank of the lower neighbouring process.
- * @param[in] row_type MPI datatype for exchanging non-contiguous row data.
+ * @param[in,out] x        Grid array to exchange ghost cells for.
+ * @param[in]     nx       Number of interior grid points in x-axis.
+ * @param[in]     row_s    Starting row index of local domain.
+ * @param[in]     row_e    Ending row index of local domain.
+ * @param[in]     col_s    Starting column index of local domain.
+ * @param[in]     col_e    Ending column index of local domain.
+ * @param[in]     comm     MPI communicator.
+ * @param[in]     nbrleft  Rank of the left neighboring process.
+ * @param[in]     nbrright Rank of the right neighboring process.
+ * @param[in]     nbrup    Rank of the upper neighboring process.
+ * @param[in]     nbrdown  Rank of the lower neighboring process.
+ * @param[in]     row_type MPI datatype for exchanging non-contiguous row data.
  */
 void exchang2d_nb(double x[][maxn], int nx __attribute__((unused)), int row_s,
                   int row_e, int col_s, int col_e, MPI_Comm comm, int nbrleft,
@@ -101,34 +98,34 @@ void exchang2d_nb(double x[][maxn], int nx __attribute__((unused)), int row_s,
 
   // Left boundary column, which is contiguous
   MPI_Irecv(&x[col_s - 1][row_s], lny, MPI_DOUBLE, nbrleft, 0, comm,
-            &reqs[0]); // Receives the ghost column from the left neighbour into
+            &reqs[0]); // Receives the ghost column from the left neighbor into
                        // the column at index col_s - 1
 
   // Right boundary column, which is contiguous
   MPI_Irecv(&x[col_e + 1][row_s], lny, MPI_DOUBLE, nbrright, 1, comm,
-            &reqs[1]); // Receives the ghost column from the right neighbour
+            &reqs[1]); // Receives the ghost column from the right neighbor
                        // into the column at index col_e + 1
 
   // Bottom boundary row, which is non-contiguous and thus, is using row_type
   MPI_Irecv(&x[col_s][row_s - 1], 1, row_type, nbrdown, 2, comm,
-            &reqs[2]); // Receives the ghost row from the bottom neighbour into
+            &reqs[2]); // Receives the ghost row from the bottom neighbor into
                        // the row at index row_s - 1
 
   // Top boundary row, which is non-contiguous and thus, is using row_type
   MPI_Irecv(&x[col_s][row_e + 1], 1, row_type, nbrup, 3, comm,
-            &reqs[3]); // Receives the ghost row from the top neighbour into the
+            &reqs[3]); // Receives the ghost row from the top neighbor into the
                        // row at index row_e + 1
 
-  // Send rightmost column to right neighbour
+  // Send rightmost column to right neighbor
   MPI_Isend(&x[col_e][row_s], lny, MPI_DOUBLE, nbrright, 0, comm, &reqs[4]);
 
-  // Send leftmost column to left neighbour
+  // Send leftmost column to left neighbor
   MPI_Isend(&x[col_s][row_s], lny, MPI_DOUBLE, nbrleft, 1, comm, &reqs[5]);
 
-  // Send topmost row to top neighbour, which is non-contiguous
+  // Send topmost row to top neighbor, which is non-contiguous
   MPI_Isend(&x[col_s][row_e], 1, row_type, nbrup, 2, comm, &reqs[6]);
 
-  // Send bottommost row to bottom neighbour, which is non-contiguous
+  // Send bottommost row to bottom neighbor, which is non-contiguous
   MPI_Isend(&x[col_s][row_s], 1, row_type, nbrdown, 3, comm, &reqs[7]);
 
   // Wait for all communications to complete
@@ -141,15 +138,15 @@ void exchang2d_nb(double x[][maxn], int nx __attribute__((unused)), int row_s,
  * Computes the sum of squared differences between two grid arrays, which is
  * used to check for convergence between iterations of the Jacobi method.
  *
- * @param[in] a First grid array.
- * @param[in] b Second grid array.
- * @param[in] nx Number of interior grid points in x-axis.
+ * @param[in] a     First grid array.
+ * @param[in] b     Second grid array.
+ * @param[in] nx    Number of interior grid points in x-axis.
  * @param[in] row_s Starting row index of local domain.
  * @param[in] row_e Ending row index of local domain.
  * @param[in] col_s Starting column index of local domain.
  * @param[in] col_e Ending column index of local domain.
  *
- * @return Sum of squared differences between the two grid arrays.
+ * @returns Sum of squared differences between the two grid arrays.
  */
 double griddiff2d(double a[][maxn], double b[][maxn],
                   int nx __attribute__((unused)), int row_s, int row_e,
@@ -169,17 +166,17 @@ double griddiff2d(double a[][maxn], double b[][maxn],
  * @brief Performs one Jacobi iteration step.
  *
  * Updates the grid values for one iteration of the Jacobi method. For each
- * point, computes the average of its four neighbours, adjusted by the
- * right-hand side function values, to solve the Poisson equation.
+ * point, computes the average of its four neighbors, adjusted by the right-hand
+ * side function values, to solve the Poisson equation.
  *
- * @param[in] a Current iteration grid array.
- * @param[in] f Right-hand side function values.
- * @param[in] nx Number of interior grid points in x-axis.
- * @param[in] row_s Starting row index of local domain.
- * @param[in] row_e Ending row index of local domain.
- * @param[in] col_s Starting column index of local domain.
- * @param[in] col_e Ending column index of local domain.
- * @param[out] b Next iteration grid array to store the updated values.
+ * @param[in]  a     Current iteration grid array.
+ * @param[in]  f     Right-hand side function values.
+ * @param[in]  nx    Number of interior grid points in x-axis.
+ * @param[in]  row_s Starting row index of local domain.
+ * @param[in]  row_e Ending row index of local domain.
+ * @param[in]  col_s Starting column index of local domain.
+ * @param[in]  col_e Ending column index of local domain.
+ * @param[out] b     Next iteration grid array to store the updated values.
  */
 void sweep2d(double a[][maxn], double f[][maxn], int nx, int row_s, int row_e,
              int col_s, int col_e, double b[][maxn]) {

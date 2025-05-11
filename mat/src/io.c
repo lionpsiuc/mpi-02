@@ -18,9 +18,8 @@
  *
  * @return 0 on success, non-zero on error.
  */
-int read_distributed_matrix(const char* filename,
-                            double local_matrix[][BLOCK_DIM], int rank,
-                            int nprocs, MPI_Comm comm) {
+int read_mat(const char* filename, double local_matrix[][BLOCK_DIM], int rank,
+             int nprocs, MPI_Comm comm) {
   MPI_File   file;
   MPI_Status status;
   int        ierr;
@@ -97,8 +96,8 @@ int read_distributed_matrix(const char* filename,
  *
  * @return 0 on success, non-zero on error.
  */
-int read_distributed_vector(const char* filename, double* local_vector,
-                            int rank, int nprocs, MPI_Comm comm) {
+int read_vec(const char* filename, double* local_vector, int rank, int nprocs,
+             MPI_Comm comm) {
   MPI_File   file;
   MPI_Status status;
   int        ierr;
@@ -157,20 +156,29 @@ int read_distributed_vector(const char* filename, double* local_vector,
  * @param[in] local_matrix The local matrix data.
  * @param[in] rank         Process rank.
  */
-void print_local_matrix(double local_matrix[][BLOCK_DIM], int rank) {
+void print_local_mat(double local_matrix[][BLOCK_DIM], int rank) {
   int blocks_per_column = BLOCKS_PER_DIM; // Four blocks per column
   printf("Process %d - Column %d\n", rank, rank);
   for (int block = 0; block < blocks_per_column; block++) {
     int row_offset = block * BLOCK_DIM;
-    printf("Block %d - Rows %d-%d \n", block, row_offset,
+    printf("Block %d - Rows %d-%d\n", block, row_offset,
            row_offset + BLOCK_DIM - 1);
+    printf("[[");
     for (int i = 0; i < BLOCK_DIM; i++) {
-      for (int j = 0; j < BLOCK_DIM; j++) {
-        printf("%4.0f ", local_matrix[row_offset + i][j]);
+      if (i > 0) {
+        printf("[");
       }
-      printf("\n");
+      for (int j = 0; j < BLOCK_DIM; j++) {
+        if (j > 0) {
+          printf(" ");
+        }
+        printf("%.0f.", local_matrix[row_offset + i][j]);
+      }
+      if (i < BLOCK_DIM - 1) {
+        printf("]\n ");
+      }
     }
-    printf("\n");
+    printf("]]\n\n");
   }
 }
 
@@ -180,7 +188,7 @@ void print_local_matrix(double local_matrix[][BLOCK_DIM], int rank) {
  * @param[in] local_vector The local vector data.
  * @param[in] rank         Process rank.
  */
-void print_local_vector(double* local_vector, int rank) {
+void print_local_vec(double* local_vector, int rank) {
   printf("Process %d - Rows %d-%d\n", rank, rank * BLOCK_DIM,
          (rank + 1) * BLOCK_DIM - 1);
   for (int i = 0; i < BLOCK_DIM; i++) {

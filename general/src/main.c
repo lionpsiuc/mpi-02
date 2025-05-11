@@ -1,9 +1,5 @@
 /**
  * @file main.c
- *
- * @brief Explain briefly.
- *
- * Further explanation, if required.
  */
 
 #include <math.h>
@@ -23,10 +19,10 @@
 /**
  * @brief Main function.
  *
- * @param[in] argc Explain briefly.
- * @param[in] argv Explain briefly.
+ * @param[in] argc Number of command-line arguments.
+ * @param[in] argv Command-line arguments.
  *
- * @return 0 upon successful execution.
+ * @returns 0 on success, non-zero on error.
  */
 int main(int argc, char** argv) {
 
@@ -47,8 +43,8 @@ int main(int argc, char** argv) {
   int  namelen;      // Length of processor name
 
   // Domain decomposition
-  int nbrup, nbrright, nbrdown, nbrleft; // Explain how this works
-  int row_s, row_e, col_s, col_e;        // Explain how this works
+  int nbrup, nbrright, nbrdown, nbrleft;
+  int row_s, row_e, col_s, col_e;
 
   // Iteration and convergence
   int    it;            // Iteration counter

@@ -5,6 +5,7 @@
  */
 
 #include "../include/io.h"
+#include "../include/matvec.h"
 
 /**
  * @brief Main function demonstrating distributed matrix and vector reading.
@@ -12,7 +13,7 @@
  * @param[in] argc Number of command-line arguments.
  * @param[in] argv Command-line arguments.
  *
- * @return 0 on success, non-zero on error.
+ * @returns 0 on success, non-zero on error.
  */
 int main(int argc, char** argv) {
   int  rank, nprocs;
@@ -41,6 +42,9 @@ int main(int argc, char** argv) {
   // Each process gets five elements of the vector
   double local_vector[BLOCK_DIM];
 
+  // Allocate memory for the result vector
+  double local_result[BLOCK_DIM];
+
   // Filenames
   const char* matrix_filename = "mat-d20-b5-p4.bin";
   const char* vector_filename = "x-d20.txt.bin";
@@ -50,8 +54,8 @@ int main(int argc, char** argv) {
     printf("Reading matrix from %s\n", matrix_filename);
   }
 
-  int result = read_distributed_matrix(matrix_filename, local_matrix, rank,
-                                       nprocs, MPI_COMM_WORLD);
+  int result =
+      read_mat(matrix_filename, local_matrix, rank, nprocs, MPI_COMM_WORLD);
   if (result != 0) {
     if (rank == 0) {
       fprintf(stderr, "Error: Failed to read from %s\n", matrix_filename);
@@ -65,8 +69,8 @@ int main(int argc, char** argv) {
     printf("Reading vector from %s\n", vector_filename);
   }
 
-  result = read_distributed_vector(vector_filename, local_vector, rank, nprocs,
-                                   MPI_COMM_WORLD);
+  result =
+      read_vec(vector_filename, local_vector, rank, nprocs, MPI_COMM_WORLD);
   if (result != 0) {
     if (rank == 0) {
       fprintf(stderr, "Error: Failed to read from %s\n", vector_filename);
@@ -78,16 +82,42 @@ int main(int argc, char** argv) {
   // Barrier to ensure all processes have finished reading
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // // Print data
-  // for (int p = 0; p < nprocs; p++) {
-  //   if (p == rank) {
-  //     print_local_matrix(local_matrix, rank);
-  //     print_local_vector(local_vector, rank);
-  //     fflush(stdout);
-  //   }
-  //   MPI_Barrier(MPI_COMM_WORLD);
-  //   usleep(1000);
-  // }
+  // Print data
+  for (int p = 0; p < nprocs; p++) {
+    if (p == rank) {
+      print_local_mat(local_matrix, rank);
+      print_local_vec(local_vector, rank);
+      fflush(stdout);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    usleep(1000);
+  }
+
+  // Perform the multiplication
+  result = matvec(local_matrix, local_vector, local_result, rank, nprocs,
+                  MPI_COMM_WORLD);
+  if (result != 0) {
+    if (rank == 0) {
+      fprintf(stderr, "Error: Multiplication failed\n");
+    }
+    MPI_Finalize();
+    return 1;
+  }
+
+  // Print local results
+  for (int p = 0; p < nprocs; p++) {
+    if (p == rank) {
+      print_local_res(local_result, rank);
+      fflush(stdout);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    usleep(1000);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Gather and print complete result for verification
+  print_res(local_result, rank, MPI_COMM_WORLD);
 
   // Clean up and finalize
   MPI_Finalize();
